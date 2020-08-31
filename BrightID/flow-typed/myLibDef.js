@@ -181,6 +181,8 @@ declare type PendingConnection = {
   timestamp?: number,
   signedMessage?: string,
   score?: number,
+  initiator: boolean,
+  wantsToConfirm: boolean,
 };
 
 declare type RecoveryData = {

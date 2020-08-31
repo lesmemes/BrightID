@@ -4,10 +4,7 @@ import {
   selectChannelById,
 } from '@/components/PendingConnectionsScreens/channelSlice';
 import { obtainKeys } from '@/utils/keychain';
-import { TIME_FUDGE } from '@/utils/constants';
-import { hash, strToUint8Array, uInt8ArrayToB64 } from '@/utils/encoding';
-import nacl from 'tweetnacl';
-import api from '@/api/brightId';
+import { hash } from '@/utils/encoding';
 import { addConnection, addOperation } from '@/actions';
 import { saveImage } from '@/utils/filesystem';
 import { backupPhoto, backupUser } from '@/components/Recovery/helpers';
@@ -18,6 +15,10 @@ import {
   updatePendingConnection,
 } from '@/components/PendingConnectionsScreens/pendingConnectionSlice';
 import { leaveChannel } from '@/components/PendingConnectionsScreens/actions/channelThunks';
+import {
+  initiateConnectionRequest,
+  respondToConnectionRequest,
+} from '@/utils/connections';
 import stringify from 'fast-json-stable-stringify';
 
 export const confirmPendingConnectionThunk = (id: string) => async (
@@ -28,6 +29,9 @@ export const confirmPendingConnectionThunk = (id: string) => async (
     getState(),
     id,
   );
+  if (!connection) {
+    throw new Error(`Can't confirm connection ${id} - Connection not found`);
+  }
   // validate pendingConnection state
   if (connection.state !== pendingConnection_states.UNCONFIRMED) {
     console.log(`Can't confirm - Connection is in state ${connection.state}`);
@@ -50,69 +54,54 @@ export const confirmPendingConnectionThunk = (id: string) => async (
     user: { backupCompleted },
   } = getState();
 
-  let { username, secretKey } = await obtainKeys();
+  let { username: myBrightId, secretKey } = await obtainKeys();
   let connectionTimestamp = Date.now();
 
-  if (connection.signedMessage) {
-    // I'm responding
-    // The other user signed a connection request; we have enough info to
-    // make an API call to create the connection.
-    if (connection.timestamp > connectionTimestamp + TIME_FUDGE) {
-      throw new Error("timestamp can't be in the future");
-    }
-
-    const message = `Add Connection${connection.brightId}${username}${connection.timestamp}`;
-    const signedMessage = uInt8ArrayToB64(
-      nacl.sign.detached(strToUint8Array(message), secretKey),
-    );
-    api.createConnection(
-      connection.brightId,
-      connection.signedMessage,
-      username,
-      signedMessage,
-      connection.timestamp,
-    );
-  } else {
-    // I'm initiating
-    const message = `Add Connection${username}${connection.brightId}${connectionTimestamp}`;
-    const signedMessage = uInt8ArrayToB64(
-      nacl.sign.detached(strToUint8Array(message), secretKey),
-    );
-
-    // bring signedmessage to peer so he knows i want to connect with him...
-    console.log(
-      `Uploading signed connection string for ${connection.name} to channel ${connection.id}`,
-    );
-    const data = {
-      signedMessage,
+  if (connection.initiator) {
+    const { opName, opMessage } = await initiateConnectionRequest({
       connectionTimestamp,
-    };
-
-    await channel.api.upload({
-      channelId: connection.id,
-      data,
-      dataId: channel.myProfileId,
+      connection,
+      secretKey,
+      myBrightId,
+      channel,
     });
 
-    // Listen for add connection operation to be completed by other party
-    const apiVersion = 5;
-    const opName = 'Add Connection';
-    const op = {
-      name: opName,
-      id1: username,
-      id2: connection.brightId,
-      timestamp: connectionTimestamp,
-      v: apiVersion,
-    };
-    const opMessage = stringify(op);
+    // Start listening for peer to complete connection operation
     console.log(`Responder opMessage: ${opMessage} - hash: ${hash(opMessage)}`);
-    const watchOp = {
-      hash: hash(opMessage),
+    const op = {
+      _key: hash(opMessage),
       name: opName,
-      timestamp: connectionTimestamp,
-      v: apiVersion,
+      connectionTimestamp,
     };
-    dispatch(addOperation(watchOp));
+    dispatch(addOperation(op));
+  } else {
+    if (connection.signedMessage) {
+      // signedmessage from initiator is already available.
+      await respondToConnectionRequest({
+        otherBrightId: connection.brightId,
+        signedMessage: connection.signedMessage,
+        timestamp: connection.timestamp,
+        myBrightId,
+        secretKey,
+      });
+      if (channel.type === channel_types.SINGLE) {
+        // Connection is established, so the 1:1 channel can be left
+        dispatch(leaveChannel(channel.id));
+      }
+    } else {
+      // signedMessage from initiator is still pending.
+      // Remember that I want to confirm this connection. As soon as
+      // the connectionRequest with signedMessage comes in, complete
+      // the connection.
+      dispatch(
+        updatePendingConnection({
+          id,
+          changes: {
+            wantsToConfirm: true,
+          },
+        }),
+      );
+    }
   }
 
   // save connection photo
@@ -135,11 +124,6 @@ export const confirmPendingConnectionThunk = (id: string) => async (
 
   dispatch(addConnection(connectionData));
   dispatch(confirmPendingConnection(connection.id));
-
-  if (channel.type === channel_types.SINGLE) {
-    // Connection is established, so the 1:1 channel can be left
-    dispatch(leaveChannel(channel.id));
-  }
 
   if (backupCompleted) {
     await backupUser();

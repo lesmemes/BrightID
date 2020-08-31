@@ -35,6 +35,7 @@ export const obtainKeys = async () => {
 
     await saveSecretKey(id, keyToString(secretKey));
 
+    // TODO: Rename return parameter from username to e.g. brigthId
     return { username: id, secretKey: objToUint8(secretKey) };
   }
 };
