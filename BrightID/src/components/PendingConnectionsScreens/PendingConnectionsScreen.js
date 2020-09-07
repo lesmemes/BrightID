@@ -20,8 +20,6 @@ import {
 } from 'react-native';
 import Spinner from 'react-native-spinkit';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import Material from 'react-native-vector-icons/MaterialCommunityIcons';
-
 import Carousel, { Pagination } from 'react-native-snap-carousel';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
@@ -337,40 +335,6 @@ export const PendingConnectionsScreen = () => {
     );
   }, [pendingConnections]);
 
-  const ZeroConnectionsToDisplay = () => {
-    return (
-      <View
-        style={{
-          alignItems: 'center',
-          justifyContent: 'center',
-          flex: 1,
-          width: '100%',
-          height: '100%',
-        }}
-      >
-        <Material
-          name="account-clock-outline"
-          size={DEVICE_LARGE ? 48 : 40}
-          color="#333"
-        />
-        <Text style={styles.waitingText}>Waiting for more connections</Text>
-        <Spinner isVisible={true} size={60} type="ThreeBounce" color="#333" />
-        <TouchableOpacity
-          style={styles.bottomButton}
-          onPress={() => {
-            navigation.navigate('Home');
-          }}
-        >
-          <Material
-            name="card-account-details-outline"
-            size={DEVICE_LARGE ? 36 : 24}
-            color="#333"
-          />
-          <Text style={styles.bottomButtonText}>Return Home</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
   if (!DEVICE_LARGE) {
     console.log('rendering pending connections SCREEN');
   }
@@ -390,7 +354,7 @@ export const PendingConnectionsScreen = () => {
           type="FadingCircleAlt"
           color="#aaa"
         />
-      ) : pendingConnections.length ? (
+      ) : (
         <>
           {PendingConnectionList}
           <Pagination
@@ -412,8 +376,6 @@ export const PendingConnectionsScreen = () => {
             tappableDots={true}
           />
         </>
-      ) : (
-        <ZeroConnectionsToDisplay />
       )}
     </SafeAreaView>
   );
