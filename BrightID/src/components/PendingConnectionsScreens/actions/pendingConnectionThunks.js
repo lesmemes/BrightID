@@ -59,24 +59,27 @@ export const confirmPendingConnectionThunk = (id: string) => async (
 
   if (connection.initiator) {
     const { opName, opMessage } = await initiateConnectionRequest({
-      connectionTimestamp,
-      connection,
-      secretKey,
-      myBrightId,
       channel,
+      connection,
+      connectionTimestamp,
+      myBrightId,
+      secretKey,
     });
 
-    // Start listening for peer to complete connection operation
-    console.log(`Responder opMessage: ${opMessage} - hash: ${hash(opMessage)}`);
     const op = {
       _key: hash(opMessage),
       name: opName,
       connectionTimestamp,
     };
+
+    // Start listening for peer to complete connection operation
+    console.log(
+      `Start waiting for responder opMessage: ${opMessage} - hash: ${op._key}`,
+    );
     dispatch(addOperation(op));
   } else {
     if (connection.signedMessage) {
-      // signedmessage from initiator is already available.
+      // signedmessage from initiator is already available. Can respond immediately.
       await respondToConnectionRequest({
         otherBrightId: connection.brightId,
         signedMessage: connection.signedMessage,
@@ -91,13 +94,12 @@ export const confirmPendingConnectionThunk = (id: string) => async (
     } else {
       // signedMessage from initiator is still pending.
       // Remember that I want to confirm this connection. As soon as
-      // the connectionRequest with signedMessage comes in, complete
-      // the connection.
+      // the connectionRequest with signedMessage comes in, connection operation will be created.
       dispatch(
         updatePendingConnection({
           id,
           changes: {
-            wantsToConfirm: true,
+            preConfirmed: true,
           },
         }),
       );
