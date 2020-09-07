@@ -6,7 +6,7 @@ import RNFS from 'react-native-fs';
 import { connect } from 'react-redux';
 import moment from 'moment';
 import Material from 'react-native-vector-icons/MaterialCommunityIcons';
-import { DEVICE_TYPE, MAX_WAITING_SECONDS } from '@/utils/constants';
+import { DEVICE_TYPE, CHANNEL_TTL } from '@/utils/constants';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
 /**
@@ -42,9 +42,8 @@ class ConnectionCard extends React.Component<Props, State> {
         // this is already old. Immediately mark as "stale", no need for a timer.
         this.setState({ isStale: true });
       } else {
-        // start timer to check if connection got verified after MAX_WAITING_TIME
-        let checkTime =
-          connectionDate + MAX_WAITING_SECONDS * 1000 + 5000 - Date.now(); // add 5 seconds buffer
+        // start timer to check if connection got verified.
+        let checkTime = connectionDate + CHANNEL_TTL - Date.now();
         if (checkTime < 0) {
           console.log(`Warning - checkTime in past: ${checkTime}`);
           checkTime = 1000; // check in 1 second
@@ -85,7 +84,7 @@ class ConnectionCard extends React.Component<Props, State> {
   checkStale = () => {
     const { connectionDate, name } = this.props;
     const ageSeconds = Math.floor((Date.now() - connectionDate) / 1000);
-    if (ageSeconds > MAX_WAITING_SECONDS) {
+    if (ageSeconds > CHANNEL_TTL) {
       console.log(`Connection ${name} is stale (age: ${ageSeconds} seconds)`);
       return true;
     }
