@@ -83,9 +83,9 @@ class ConnectionCard extends React.Component<Props, State> {
 
   checkStale = () => {
     const { connectionDate, name } = this.props;
-    const ageSeconds = Math.floor((Date.now() - connectionDate) / 1000);
-    if (ageSeconds > CHANNEL_TTL) {
-      console.log(`Connection ${name} is stale (age: ${ageSeconds} seconds)`);
+    const ageMillis = Date.now() - connectionDate;
+    if (ageMillis > CHANNEL_TTL) {
+      console.log(`Connection ${name} is stale (age: ${ageMillis}ms)`);
       return true;
     }
     return false;
