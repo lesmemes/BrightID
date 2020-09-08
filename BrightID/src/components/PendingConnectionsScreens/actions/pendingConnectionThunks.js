@@ -19,7 +19,7 @@ import {
   initiateConnectionRequest,
   respondToConnectionRequest,
 } from '@/utils/connections';
-import stringify from 'fast-json-stable-stringify';
+import {DEFAULT_OP_TRACE_TIME} from '../../../utils/constants';
 
 export const confirmPendingConnectionThunk = (id: string) => async (
   dispatch: dispatch,
@@ -47,7 +47,7 @@ export const confirmPendingConnectionThunk = (id: string) => async (
     }),
   );
 
-  const channel = selectChannelById(getState(), connection.channelId);
+  const channel: Channel = selectChannelById(getState(), connection.channelId);
   console.log(`confirming connection ${id} in channel ${channel.id}`);
 
   const {
@@ -66,16 +66,15 @@ export const confirmPendingConnectionThunk = (id: string) => async (
       secretKey,
     });
 
+    // Start listening for peer to complete connection operation.
+    // Set op tracetime to remaining channel lifetime + default tracetime as buffer
+    const tracetime = channel.timestamp + channel.ttl + DEFAULT_OP_TRACE_TIME - Date.now();
     const op = {
       _key: hash(opMessage),
       name: opName,
-      connectionTimestamp,
+      timestamp: connectionTimestamp,
+      tracetime,
     };
-
-    // Start listening for peer to complete connection operation
-    console.log(
-      `Start waiting for responder opMessage: ${opMessage} - hash: ${op._key}`,
-    );
     dispatch(addOperation(op));
   } else {
     if (connection.signedMessage) {
