@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useLayoutEffect } from 'react';
 import {
-  Animated,
   StyleSheet,
   Text,
   View,
@@ -31,10 +30,10 @@ import {
   selectAllPendingConnectionsByChannelIds,
   selectAlUnconfirmedConnectionsByChannelIds,
 } from '@/components/PendingConnectionsScreens/pendingConnectionSlice';
-import { createFakeConnection } from '@/components/Connections/models/createFakeConnection';
 import { createChannel } from '@/components/PendingConnectionsScreens/actions/channelThunks';
 import { setActiveNotification } from '@/actions';
 import { QrCode } from './QrCode';
+import { addFakeConnection } from '../../actions/fakeContact';
 
 /**
  * My Code screen of BrightID
@@ -45,18 +44,20 @@ import { QrCode } from './QrCode';
  *
  */
 
-let FakeConnectionBtn;
-if (__DEV__) {
-  FakeConnectionBtn = () => (
+const FakeConnectionBtn = () => {
+  const dispatch = useDispatch();
+  return (
     <TouchableOpacity
       testID="fakeConnectionBtn"
       style={{ marginRight: 11 }}
-      onPress={createFakeConnection}
+      onPress={() => {
+        dispatch(addFakeConnection());
+      }}
     >
       <Material name="ghost" size={32} color="#fff" />
     </TouchableOpacity>
   );
-}
+};
 
 const PENDING_GROUP_TIMEOUT = 45000;
 
@@ -141,7 +142,6 @@ export const MyCodeScreen = () => {
       headerRight: () =>
         unconfirmedConnectionSize > 0 ? (
           <TouchableOpacity
-            testID="fakeConnectionBtn"
             style={{ width: DEVICE_LARGE ? 60 : 50 }}
             onPress={() => {
               navigation.navigate('PendingConnections');
