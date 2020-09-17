@@ -13,12 +13,11 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 import { useDispatch, useSelector } from 'react-redux';
 import Material from 'react-native-vector-icons/MaterialCommunityIcons';
 import ChannelSwitch from '@/components/Helpers/ChannelSwitch';
-import { DEVICE_LARGE, ORANGE, DEVICE_IOS } from '@/utils/constants';
+import { DEVICE_LARGE, ORANGE } from '@/utils/constants';
 import cameraIcon from '@/static/camera_icon_white.svg';
 import {
   channel_states,
@@ -226,6 +225,7 @@ export const MyCodeScreen = () => {
           <ChannelSwitch
             onValueChange={toggleChannelType}
             value={displayChannelType === channel_types.SINGLE}
+            testID="ChannelSwitch"
           />
         </View>
         <View style={styles.infoTopContainer}>
@@ -234,6 +234,7 @@ export const MyCodeScreen = () => {
             <TouchableOpacity
               style={{ flexDirection: 'row' }}
               onPress={displayManyToManyInfo}
+              testID="ConnectionInfoBtn"
             >
               <Text style={styles.infoTopText}>Many to Many </Text>
               <Material name="information-variant" size={18} color="#4a4a4a" />
@@ -242,6 +243,7 @@ export const MyCodeScreen = () => {
             <TouchableOpacity
               style={{ flexDirection: 'row' }}
               onPress={displayOneToOneInfo}
+              testID="ConnectionInfoBtn"
             >
               <Text style={styles.infoTopText}>One to One </Text>
               <Material name="information-variant" size={18} color="#4a4a4a" />
